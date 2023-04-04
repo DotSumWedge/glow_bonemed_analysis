@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(aplore3)
 library(ggplot2)
+library(plotly)
 ```
 
 ```{r}
@@ -25,11 +26,51 @@ As age increases the average bmi decreases
 There is a strong positive correlation between age and fracscore
 
 ```{r}
+plot(glow_bonemed[,5:8])
+
 ggplot(glow_bonemed, aes(x = age, y = bmi, color = fracture)) +
+  geom_jitter()
+
+ggplot(glow_bonemed, aes(x = fracscore, y = age, color = fracture)) +
+  geom_jitter()
+
+ggplot(glow_bonemed, aes(x = weight, y = height, color = fracture)) +
   geom_jitter()
 ```
 
 ```{r}
-ggplot(glow_bonemed, aes(x = fracscore, y = age, color = fracture)) +
-  geom_jitter()
+fracture3dplot = plot_ly(glow_bonemed, 
+  x = ~age, 
+  y = ~height, 
+  z = ~bmi, 
+  color = ~fracture, 
+  colors = c('#0C4B8E', '#BF382A')) %>% add_markers()
+
+fracture3dplot
+```
+
+Clustering EDA
+
+```{r}
+library(RColorBrewer)
+library(pheatmap)
+library(cluster)
+```
+
+```{r}
+pheatmap(glow_bonemed[, c(5,8)], scale = "column", fontsize_row = 0.1, cluster_cols = F, legend = T, color = colorRampPalette(c("blue", "white", "red"), space = "rgb")(100))
+```
+
+```{r}
+pheatmap(glow_bonemed[, 5:8], scale = "column", fontsize_row = 0.1, cluster_cols = F, legend = T, color = colorRampPalette(c("blue", "white", "red"), space = "rgb")(100))
+```
+
+```{r}
+zScoreScale = scale(glow_bonemed[, 5:8])
+
+zScoreDistance = dist(zScoreScale)
+
+continuousVariableClustering = hclust(zScoreDistance, method = "complete")
+
+plot(continuousVariableClustering)
 ```
