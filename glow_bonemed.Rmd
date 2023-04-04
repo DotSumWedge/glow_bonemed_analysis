@@ -1,0 +1,19 @@
+---
+title: "glow_bonemed EDA"
+author: "Derek Rogers"
+date: "2023-04-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(aplore3)
+```
+
+```{r}
+head(glow_bonemed)
+summary(glow_bonemed)
+```
