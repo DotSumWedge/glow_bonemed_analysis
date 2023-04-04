@@ -11,9 +11,25 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(aplore3)
+library(ggplot2)
 ```
 
 ```{r}
 head(glow_bonemed)
 summary(glow_bonemed)
+```
+
+From the age vs bmi and fracscore vs age scatter plots there doesn't seem to be any groupings or separations between fracture yes/no categorical response.
+
+As age increases the average bmi decreases
+There is a strong positive correlation between age and fracscore
+
+```{r}
+ggplot(glow_bonemed, aes(x = age, y = bmi, color = fracture)) +
+  geom_jitter()
+```
+
+```{r}
+ggplot(glow_bonemed, aes(x = fracscore, y = age, color = fracture)) +
+  geom_jitter()
 ```
