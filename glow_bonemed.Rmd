@@ -2,7 +2,11 @@
 title: "glow_bonemed EDA"
 author: "Derek Rogers, "
 date: "2023-04-04"
-output: html_document
+output: 
+  html_document:
+    theme: cerulean
+    fontsize: 16pt
+  
 ---
 
 ```{r setup, include=FALSE}
@@ -50,13 +54,21 @@ There is a strong positive correlation between age and fracscore
 
 ```{r}
 plot(glow_bonemed[, c(5:8, 14)])
+```
 
+```{r}
 ggplot(glow_bonemed, aes(x = age, y = bmi, color = fracture)) +
   geom_jitter()
+```
 
+Fracture score increases as age increases
+
+```{r}
 ggplot(glow_bonemed, aes(x = fracscore, y = age, color = fracture)) +
   geom_jitter()
+```
 
+```{r}
 ggplot(glow_bonemed, aes(x = weight, y = height, color = fracture)) +
   geom_jitter()
 ```
@@ -99,8 +111,6 @@ continuousVariableClustering = hclust(zScoreDistance, method = "complete")
 
 plot(continuousVariableClustering)
 ```
-
-
 
 Sources:
   Hosmer, D.W., Lemeshow, S. and Sturdivant, R.X. (2013) Applied Logistic Regression, 3rd ed.,
