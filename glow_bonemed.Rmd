@@ -13,30 +13,33 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r, message=FALSE}
 library(aplore3)
 library(ggplot2)
 library(plotly)
 ```
 
-Data Format:
-  A data.frame with 500 rows and 18 variables such as:
-  
-  priorfrac - If the patient previously had a fracture
-  age
-  weight
-  height
-  bmi
-  premeno
-  momfrac
-  armassist
-  smoke
-  raterisk
-  fracscore
-  fracture
-  bonemed - Bone medications at enrollment (1: No, 2: Yes)
-  bonemed_fu - Bone medications at follow-up (1: No, 2: Yes)
-  bonetreat - Bone medications both at enrollment and follow-up (1: No, 2: Yes)
+```{r}
+
+```
+
+Data Format: A data.frame with 500 rows and 18 variables such as:
+
+priorfrac - If the patient previously had a fracture<br>
+age<br>
+weight<br>
+height<br>
+bmi<br>
+premeno<br>
+momfrac<br>
+armassist<br>
+smoke<br>
+raterisk<br>
+fracscore<br>
+fracture<br>
+bonemed - Bone medications at enrollment (1: No, 2: Yes)<br>
+bonemed_fu - Bone medications at follow-up (1: No, 2: Yes)<br>
+bonetreat - Bone medications both at enrollment and follow-up (1: No, 2: Yes)<br>
 
 
 ```{r}
