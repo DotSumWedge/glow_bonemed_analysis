@@ -193,6 +193,14 @@ plot(continuousVariableClustering)
 
 # Modeling
 
+Age is the only statistically significant continuous variable at the alpha = 0.2 level (p < 0.0001)
+
+```{r}
+model = glm(fracture ~ age + weight + height + bmi, data = glow_bonemed, family = "binomial")
+
+summary(model)
+```
+
 ```{r}
 corr_vars <- c("age", "weight", "height", "bmi", "fracscore")
 pc.result<-prcomp(glow_bonemed[, corr_vars],scale.=TRUE)
