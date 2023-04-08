@@ -20,6 +20,7 @@ library(plotly)
 library(RColorBrewer)
 library(pheatmap)
 library(cluster)
+library(ggcorrplot)
 library(dplyr)
 library(tidyr)
 ```
@@ -114,7 +115,7 @@ ggplot(glow_bonemed, aes(x = weight, y = height, color = fracture)) +
 
 Once again there doesn't seem to be strong groupings of the fracture categorical variable
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 fracture3dplot = plot_ly(glow_bonemed, 
   x = ~age, 
   y = ~height, 
@@ -125,6 +126,20 @@ fracture3dplot = plot_ly(glow_bonemed,
 fracture3dplot
 ```
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(glow_bonemed, aes(x = bmi, y = fracscore, colour = fracture)) + 
+  geom_point() +
+  geom_smooth(method = "loess", size = 1,span = 0.75) +
+  ylim(-0.2, 1.2)
+```
+
+```{r, echo=FALSE}
+ggplot(glow_bonemed, aes(x = bmi, y = age, colour = raterisk)) +
+  geom_point() +
+  geom_smooth(method = "loess", linewidth = 1, span = 0.75) +
+  facet_wrap(~raterisk)
+```
+
 The boxplot shows that the mean fracscore seems to be slightly higher for smokers compared to non smokers
 
 ```{r}
@@ -133,10 +148,20 @@ ggplot(glow_bonemed, aes(x = smoke, y = fracscore)) +
   labs(title = "Fracture Score Summary Statistics for Smokers vs Non Smokers")
 ```
 
+```{r}
+corr_vars <- c("age", "weight", "height", "bmi", "fracscore")
+
+corr_df <- glow_bonemed[, corr_vars]
+corr_df <- cor(corr_df)
+
+ggcorrplot(corr = corr_df, lab = TRUE, lab_size = 2,
+           colors = c("#6D9EC1", "white", "#E46726")) +
+  labs(title = "Correlation Between Variables") +
+  theme(plot.title = element_text(hjust = .5),
+        plot.subtitle = element_text(hjust = .5))
+```
+
 # Clustering EDA
-
-
-
 
 ```{r}
 pheatmap(glow_bonemed[, c(5,8)], scale = "column", fontsize_row = 0.1, cluster_cols = F, legend = T, color = colorRampPalette(c("blue", "white", "red"), space = "rgb")(100))
@@ -160,7 +185,34 @@ continuousVariableClustering = hclust(zScoreDistance, method = "complete")
 plot(continuousVariableClustering)
 ```
 
-Sources:<br>
+# Modeling
+
+```{r}
+
+```
+
+```{r}
+corr_vars <- c("age", "weight", "height", "bmi", "fracscore")
+pc.result<-prcomp(glow_bonemed[, corr_vars],scale.=TRUE)
+
+#Eigen Vectors
+pc.result$rotation
+
+#Eigen Values
+eigenvals<-pc.result$sdev^2
+eigenvals
+```
+
+```{r}
+#Scree plot
+par(mfrow=c(1,2))
+plot(eigenvals,type="l",main="Scree Plot",ylab="Eigen Values",xlab="PC #")
+plot(eigenvals/sum(eigenvals),type="l",main="Scree Plot",ylab="Prop. Var. Explained",xlab="PC #",ylim=c(0,1))
+cumulative.prop<-cumsum(eigenvals/sum(eigenvals))
+lines(cumulative.prop,lty=2)
+```
+
+#Sources:<br>
   Hosmer, D.W., Lemeshow, S. and Sturdivant, R.X. (2013) Applied Logistic Regression, 3rd ed.,
   New York: Wiley
   
