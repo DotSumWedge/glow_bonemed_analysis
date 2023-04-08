@@ -6,7 +6,6 @@ output:
   html_document:
     theme: cerulean
     fontsize: 16pt
-  
 ---
 
 ```{r setup, include=FALSE, message=FALSE, warning=FALSE}
@@ -47,26 +46,32 @@ bonetreat - Bone medications both at enrollment and follow-up (1: No, 2: Yes)<br
 head(glow_bonemed)
 ```
 
+Summary statistics for numeric variables
+
 ```{r, message=FALSE, warning=FALSE}
 mysummary = glow_bonemed %>%
-  select(age, weight, height, bmi, fracscore) %>% # select variables to summarise
-  summarise_each(funs(min = min, 
-                      q25 = quantile(., 0.25), 
-                      median = median, 
-                      q75 = quantile(., 0.75), 
-                      max = max,
-                      mean = mean, 
-                      sd = sd,
-                      variance= var))
+  select(age, weight, height, bmi, fracscore) %>%
+  summarise_each(
+    funs(min = min, 
+    q25 = quantile(., 0.25), 
+    median = median, 
+    q75 = quantile(., 0.75), 
+    max = max,
+    mean = mean, 
+    sd = sd,
+    variance= var))
 
 # reshape it using tidyr functions
 
-clean.summary = mysummary %>% gather(stat, val) %>%
+clean.summary = mysummary %>% 
+  gather(stat, val) %>%
   separate(stat, into = c("var", "stat"), sep = "_") %>%
   spread(stat, val) %>%
-  select(var, min, max, mean, sd,variance) # reorder columns
+  select(var, min, max, mean, sd, variance)
+
 print(clean.summary)
 ```
+Summary statistics for categorical variables
 
 ```{r}
 summary(glow_bonemed %>% select(priorfrac, premeno, momfrac, armassist, smoke, raterisk, fracture, bonemed, bonemed_fu, bonetreat))
@@ -89,27 +94,28 @@ BMI vs fracscore: As fracscore increases the average bmi decreases<br>
 ```{r}
 plot(glow_bonemed[, c(5:8, 14)])
 ```
+
 Non of the following scatter plots show strong groupings for the fracture/no fracture categorical variable
 ```{r}
 ggplot(glow_bonemed, aes(x = age, y = bmi, color = fracture)) +
-  geom_jitter()+
+  geom_jitter() +
   labs(title = "BMI vs Age")
 ```
 ```{r}
 ggplot(glow_bonemed, aes(x = bmi, y = fracscore, color = fracture)) +
-  geom_jitter()+
+  geom_jitter() +
   labs(title = "Fracture Score vs BMI")
 ```
 
 ```{r}
 ggplot(glow_bonemed, aes(x = fracscore, y = age, color = fracture)) +
-  geom_jitter()+
+  geom_jitter() +
   labs(title = "Age vs Fracture Score")
 ```
 
 ```{r}
 ggplot(glow_bonemed, aes(x = weight, y = height, color = fracture)) +
-  geom_jitter()+
+  geom_jitter() +
   labs(title = "Height vs Weight")
 ```
 
@@ -126,10 +132,12 @@ fracture3dplot = plot_ly(glow_bonemed,
 fracture3dplot
 ```
 
+There are so little "yes" fracture results that the plot isn't very useful
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(glow_bonemed, aes(x = bmi, y = fracscore, colour = fracture)) + 
   geom_point() +
-  geom_smooth(method = "loess", size = 1,span = 0.75) +
+  geom_smooth(method = "loess", size = 1, span = 0.75) +
   ylim(-0.2, 1.2)
 ```
 
@@ -144,9 +152,11 @@ The boxplot shows that the mean fracscore seems to be slightly higher for smoker
 
 ```{r}
 ggplot(glow_bonemed, aes(x = smoke, y = fracscore)) +
-  geom_boxplot()+
+  geom_boxplot() +
   labs(title = "Fracture Score Summary Statistics for Smokers vs Non Smokers")
 ```
+
+Plot confirms there is a strong correlation between age/fracscore, bmi/weight
 
 ```{r}
 corr_vars <- c("age", "weight", "height", "bmi", "fracscore")
@@ -155,10 +165,10 @@ corr_df <- glow_bonemed[, corr_vars]
 corr_df <- cor(corr_df)
 
 ggcorrplot(corr = corr_df, lab = TRUE, lab_size = 2,
-           colors = c("#6D9EC1", "white", "#E46726")) +
+  colors = c("#6D9EC1", "white", "#E46726")) +
   labs(title = "Correlation Between Variables") +
   theme(plot.title = element_text(hjust = .5),
-        plot.subtitle = element_text(hjust = .5))
+  plot.subtitle = element_text(hjust = .5))
 ```
 
 # Clustering EDA
@@ -167,13 +177,9 @@ ggcorrplot(corr = corr_df, lab = TRUE, lab_size = 2,
 pheatmap(glow_bonemed[, c(5,8)], scale = "column", fontsize_row = 0.1, cluster_cols = F, legend = T, color = colorRampPalette(c("blue", "white", "red"), space = "rgb")(100))
 ```
 
-
-
 ```{r}
 pheatmap(glow_bonemed[, 5:8], scale = "column", fontsize_row = 0.1, cluster_cols = F, legend = T, color = colorRampPalette(c("blue", "white", "red"), space = "rgb")(100))
 ```
-
-
 
 ```{r}
 zScoreScale = scale(glow_bonemed[, 5:8])
@@ -186,10 +192,6 @@ plot(continuousVariableClustering)
 ```
 
 # Modeling
-
-```{r}
-
-```
 
 ```{r}
 corr_vars <- c("age", "weight", "height", "bmi", "fracscore")
@@ -205,11 +207,22 @@ eigenvals
 
 ```{r}
 #Scree plot
-par(mfrow=c(1,2))
-plot(eigenvals,type="l",main="Scree Plot",ylab="Eigen Values",xlab="PC #")
-plot(eigenvals/sum(eigenvals),type="l",main="Scree Plot",ylab="Prop. Var. Explained",xlab="PC #",ylim=c(0,1))
-cumulative.prop<-cumsum(eigenvals/sum(eigenvals))
-lines(cumulative.prop,lty=2)
+par(mfrow = c(1,2))
+
+plot(eigenvals,type = "l",
+     main = "Scree Plot",
+     ylab = "Eigen Values",
+     xlab = "PC #")
+
+plot(eigenvals / sum(eigenvals), 
+     type = "l", main = "Scree Plot", 
+     ylab = "Prop. Var. Explained", 
+     xlab = "PC #", 
+     ylim = c(0, 1))
+
+cumulative.prop = cumsum(eigenvals / sum(eigenvals))
+
+lines(cumulative.prop, lty = 2)
 ```
 
 #Sources:<br>
