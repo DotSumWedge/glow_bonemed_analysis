@@ -73,21 +73,25 @@ plot(glow_bonemed[, c(5:8, 14)])
 Non of the following scatter plots show strong groupings for the fracture/no fracture categorical variable
 ```{r}
 ggplot(glow_bonemed, aes(x = age, y = bmi, color = fracture)) +
-  geom_jitter()
+  geom_jitter()+
+  labs(title = "BMI vs Age")
 ```
 ```{r}
 ggplot(glow_bonemed, aes(x = bmi, y = fracscore, color = fracture)) +
-  geom_jitter()
+  geom_jitter()+
+  labs(title = "Fracture Score vs BMI")
 ```
 
 ```{r}
 ggplot(glow_bonemed, aes(x = fracscore, y = age, color = fracture)) +
-  geom_jitter()
+  geom_jitter()+
+  labs(title = "Age vs Fracture Score")
 ```
 
 ```{r}
 ggplot(glow_bonemed, aes(x = weight, y = height, color = fracture)) +
-  geom_jitter()
+  geom_jitter()+
+  labs(title = "Height vs Weight")
 ```
 
 Once again there doesn't seem to be strong groupings of the fracture categorical variable
@@ -107,7 +111,8 @@ The boxplot shows that the mean fracscore seems to be slightly higher for smoker
 
 ```{r}
 ggplot(glow_bonemed, aes(x = smoke, y = fracscore)) +
-  geom_boxplot()
+  geom_boxplot()+
+  labs(title = "Fracture Score Summary Statistics for Smokers vs Non Smokers")
 ```
 
 # Clustering EDA
