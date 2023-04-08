@@ -9,7 +9,7 @@ output:
   
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -20,10 +20,8 @@ library(plotly)
 library(RColorBrewer)
 library(pheatmap)
 library(cluster)
-```
-
-```{r}
-
+library(dplyr)
+library(tidyr)
 ```
 
 Data Format: A data.frame with 500 rows and 18 variables such as:
@@ -48,10 +46,30 @@ bonetreat - Bone medications both at enrollment and follow-up (1: No, 2: Yes)<br
 head(glow_bonemed)
 ```
 
-```{r}
-summary(glow_bonemed)
+```{r, message=FALSE, warning=FALSE}
+mysummary = glow_bonemed %>%
+  select(age, weight, height, bmi, fracscore) %>% # select variables to summarise
+  summarise_each(funs(min = min, 
+                      q25 = quantile(., 0.25), 
+                      median = median, 
+                      q75 = quantile(., 0.75), 
+                      max = max,
+                      mean = mean, 
+                      sd = sd,
+                      variance= var))
+
+# reshape it using tidyr functions
+
+clean.summary = mysummary %>% gather(stat, val) %>%
+  separate(stat, into = c("var", "stat"), sep = "_") %>%
+  spread(stat, val) %>%
+  select(var, min, max, mean, sd,variance) # reorder columns
+print(clean.summary)
 ```
 
+```{r}
+summary(glow_bonemed %>% select(priorfrac, premeno, momfrac, armassist, smoke, raterisk, fracture, bonemed, bonemed_fu, bonetreat))
+```
 
 Age vs Weight: As weight increases the average age decreases<br>
 Age vs Height: Weak correlation of as height increases age decreases<br>
