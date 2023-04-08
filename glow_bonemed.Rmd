@@ -22,6 +22,8 @@ library(cluster)
 library(ggcorrplot)
 library(dplyr)
 library(tidyr)
+library(sjPlot)
+library(sjmisc)
 ```
 
 Data Format: A data.frame with 500 rows and 18 variables such as:
@@ -75,6 +77,13 @@ Summary statistics for categorical variables
 
 ```{r}
 summary(glow_bonemed %>% select(priorfrac, premeno, momfrac, armassist, smoke, raterisk, fracture, bonemed, bonemed_fu, bonetreat))
+```
+
+No missing values
+
+```{r}
+colSums(is.na(glow_bonemed))
+sum(is.na(glow_bonemed))
 ```
 
 Age vs Weight: As weight increases the average age decreases<br>
@@ -193,12 +202,30 @@ plot(continuousVariableClustering)
 
 # Modeling
 
+Split the data into a training/testing set
+
+```{r}
+set.seed(4)
+
+trainingIndices = sample(c(1:dim(glow_bonemed)[1]), dim(glow_bonemed)[1]*0.8)
+
+trainingDataframe = glow_bonemed[trainingIndices,]
+testingDataframe = glow_bonemed[-trainingIndices,]
+```
+
 Age is the only statistically significant continuous variable at the alpha = 0.2 level (p < 0.0001)
 
 ```{r}
 model = glm(fracture ~ age + weight + height + bmi, data = glow_bonemed, family = "binomial")
 
 summary(model)
+
+AIC(model)
+```
+
+```{r}
+# trying to figure out how to use sjPlot to mimic what we did in unit12 prelive
+#plot_model(model, type = "pred", terms = c("age", "smoke"))
 ```
 
 ```{r}
