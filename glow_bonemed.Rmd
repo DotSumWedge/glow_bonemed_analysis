@@ -24,6 +24,7 @@ library(dplyr)
 library(tidyr)
 library(sjPlot)
 library(sjmisc)
+library(caret)
 ```
 
 ```{r}
@@ -244,9 +245,10 @@ eigenvals<-pc.result$sdev^2
 eigenvals
 ```
 
+Scree plot
+
 ```{r}
-#Scree plot
-par(mfrow = c(1,2))
+par(mfrow = c(1, 2))
 
 plot(eigenvals,type = "l",
      main = "Scree Plot",
@@ -262,6 +264,22 @@ plot(eigenvals / sum(eigenvals),
 cumulative.prop = cumsum(eigenvals / sum(eigenvals))
 
 lines(cumulative.prop, lty = 2)
+```
+
+Knn model
+
+```{r}
+corr_vars <- c("age", "weight", "height", "bmi", "fracscore", "fracture")
+
+set.seed(1234)
+fitControl = trainControl(method = "repeatedcv", number = 10, repeats = 1)
+knn.fit = train(fracture ~ .,
+               data = trainingDataframe[, corr_vars],
+               method = "knn",
+               trControl = fitControl,
+               tuneGrid = expand.grid(k = c(1:10, 20, 30))
+               )
+knn.fit
 ```
 
 #Sources:<br>
