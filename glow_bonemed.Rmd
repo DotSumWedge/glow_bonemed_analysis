@@ -220,7 +220,13 @@ firstDimension = dimdesc(multipleCorrespondenceAnalysis, axes = 1)
 firstDimension
 ```
 
+bonetreat, bonemed, bonemed_fu all have a sensitivity around 78% and specificity between 32% and 42%
 
+```{r}
+confusionMatrix(table(glow_bonemed$bonetreat, glow_bonemed$fracture)) 
+confusionMatrix(table(glow_bonemed$bonemed, glow_bonemed$fracture))
+confusionMatrix(table(glow_bonemed$bonemed_fu, glow_bonemed$fracture))
+```
 
 ```{r}
 glow_bonemed$fracscore = as.factor(glow_bonemed$fracscore)
