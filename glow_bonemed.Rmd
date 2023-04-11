@@ -284,6 +284,25 @@ summary(model)
 AIC(model)
 ```
 
+bonetreat  0.87245886 7.754159e-225
+bonemed    0.84726742 2.443029e-205
+bonemed_fu 0.83803940 5.422994e-199
+raterisk   0.19571783  3.118876e-24
+fracscore  0.19131230  2.223696e-17
+priorfrac  0.10838142  4.201009e-14
+fracture   0.04922945  5.400633e-07
+armassist  0.02280481  7.047091e-04
+premeno    0.01718799  3.315107e-03
+smoke      0.01441500  7.194873e-03
+
+```{r}
+model = glm(fracture ~ age + bonetreat + bonemed + bonemed_fu , data = glow_bonemed[trainingIndices,], family = "binomial")
+
+summary(model)
+
+AIC(model)
+```
+
 ```{r}
 # trying to figure out how to use sjPlot to mimic what we did in unit12 prelive
 #plot_model(model, type = "pred", terms = c("age", "smoke"))

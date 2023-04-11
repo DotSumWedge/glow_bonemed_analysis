@@ -433,9 +433,9 @@ result$roc
 library(sjPlot)
 library(sjmisc)
 names(glow_bonemed)
-plot_model(glmnet.fit,type="pred", terms = c("fracscore"))
-plot_model(complex1,type="pred",terms=c("Pclass","Age[5,15,30,45]"))
-plot_model(complex1,type="pred",terms=c("Age","Sex","Pclass"))
+#plot_model(glmnet.fit,type="pred", terms = c("fracscore"))
+#plot_model(complex1,type="pred",terms=c("Pclass","Age[5,15,30,45]"))
+#plot_model(complex1,type="pred",terms=c("Age","Sex","Pclass"))
 ```
 
 
