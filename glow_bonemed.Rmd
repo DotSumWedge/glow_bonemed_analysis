@@ -84,6 +84,7 @@ clean.summary = mysummary %>%
 
 print(clean.summary)
 ```
+
 Summary statistics for categorical variables
 
 ```{r}
@@ -205,20 +206,33 @@ Perform chi-squared test on all categorical variables
 
 ```{r}
 glow_bonemed$fracscore = as.factor(glow_bonemed$fracscore)
-multipleCorrespondenceAnalysis = MCA(glow_bonemed[, c(4, 9:18)], graph = FALSE)
+
+blow_bonemed_categoricals = glow_bonemed[, c(4, 9:18)]
+
+multipleCorrespondenceAnalysis = MCA(blow_bonemed_categoricals, quali.sup = "fracture", graph = FALSE)
 multipleCorrespondenceAnalysis
 ```
 
+All of the categorical variables seem to have significant P values with bonetreate, bonemed, and bonemed_fu all having R^2 above .83
+
 ```{r}
+firstDimension = dimdesc(multipleCorrespondenceAnalysis, axes = 1)
+firstDimension
+```
+
+
+
+```{r}
+glow_bonemed$fracscore = as.factor(glow_bonemed$fracscore)
+
+blow_bonemed_categoricals = glow_bonemed[, c(15:18)]
+
+multipleCorrespondenceAnalysis = MCA(blow_bonemed_categoricals, graph = FALSE)
+
 plot.MCA(multipleCorrespondenceAnalysis, 
          cex = 0.8, 
          col.quali.sup = c("red", "blue", "green"), 
          title = "Multiple Correspondence Analysis")
-```
-
-```{r}
-#glow_bonemed[, c(4, 9:18)]
-#chisq.test(categoricalVariablesTable)
 ```
 
 # Clustering EDA
