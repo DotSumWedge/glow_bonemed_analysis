@@ -15,7 +15,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, message=FALSE, warning=FALSE}
 library(aplore3)
 library(ggplot2)
+library(dplyr)
 library(plotly)
+library(ca)
 library(RColorBrewer)
 library(pheatmap)
 library(cluster)
@@ -25,6 +27,8 @@ library(tidyr)
 library(sjPlot)
 library(sjmisc)
 library(caret)
+library(vcd)
+library(FactoMineR)
 ```
 
 ```{r}
@@ -56,6 +60,8 @@ head(glow_bonemed)
 Summary statistics for numeric variables
 
 ```{r, message=FALSE, warning=FALSE}
+#Set fracscore to integer for summary statistics
+glow_bonemed$fracscore = as.integer(glow_bonemed$fracscore)
 mysummary = glow_bonemed %>%
   select(age, weight, height, bmi, fracscore) %>%
   summarise_each(
@@ -185,6 +191,36 @@ ggcorrplot(corr = corr_df, lab = TRUE, lab_size = 2,
   plot.subtitle = element_text(hjust = .5))
 ```
 
+# Categorical Variable EDA
+
+```{r}
+mosaicplot(table(glow_bonemed$priorfrac, glow_bonemed$fracture), color = TRUE)
+```
+
+```{r}
+chisq.test(table(glow_bonemed$priorfrac, glow_bonemed$fracture))
+```
+
+Perform chi-squared test on all categorical variables
+
+```{r}
+glow_bonemed$fracscore = as.factor(glow_bonemed$fracscore)
+multipleCorrespondenceAnalysis = MCA(glow_bonemed[, c(4, 9:18)], graph = FALSE)
+multipleCorrespondenceAnalysis
+```
+
+```{r}
+plot.MCA(multipleCorrespondenceAnalysis, 
+         cex = 0.8, 
+         col.quali.sup = c("red", "blue", "green"), 
+         title = "Multiple Correspondence Analysis")
+```
+
+```{r}
+#glow_bonemed[, c(4, 9:18)]
+#chisq.test(categoricalVariablesTable)
+```
+
 # Clustering EDA
 
 ```{r}
@@ -221,7 +257,7 @@ testingDataframe = glow_bonemed[-trainingIndices,]
 Age is the only statistically significant continuous variable at the alpha = 0.2 level (p < 0.0001)
 
 ```{r}
-model = glm(fracture ~ age + weight + height + bmi, data = glow_bonemed, family = "binomial")
+model = glm(fracture ~ age + weight + height + bmi, data = glow_bonemed[trainingIndices,], family = "binomial")
 
 summary(model)
 
@@ -233,7 +269,10 @@ AIC(model)
 #plot_model(model, type = "pred", terms = c("age", "smoke"))
 ```
 
+Get eigen vectors and values for principle component analysis
+
 ```{r}
+glow_bonemed$fracscore = as.integer(glow_bonemed$fracscore)
 corr_vars <- c("age", "weight", "height", "bmi", "fracscore")
 pc.result<-prcomp(glow_bonemed[, corr_vars],scale.=TRUE)
 
@@ -266,7 +305,23 @@ cumulative.prop = cumsum(eigenvals / sum(eigenvals))
 lines(cumulative.prop, lty = 2)
 ```
 
-Knn model
+Naive Bayes model with categorical variables
+
+```{r}
+corr_vars <- c("priorfrac", "premeno", "momfrac", "armassist", "smoke", "raterisk", "fracture", "bonemed", "bonemed_fu", "bonetreat")
+
+set.seed(1234)
+fitControl = trainControl(method = "repeatedcv", number = 10, repeats = 1)
+nb.fit = train(fracture ~ .,
+               data = trainingDataframe[, corr_vars],
+               method = "nb",
+               trControl = fitControl
+               )
+nb.fit
+```
+
+
+Knn models
 
 ```{r}
 corr_vars <- c("age", "weight", "height", "bmi", "fracscore", "fracture")
@@ -274,6 +329,22 @@ corr_vars <- c("age", "weight", "height", "bmi", "fracscore", "fracture")
 set.seed(1234)
 fitControl = trainControl(method = "repeatedcv", number = 10, repeats = 1)
 knn.fit = train(fracture ~ .,
+               data = trainingDataframe[, corr_vars],
+               method = "knn",
+               trControl = fitControl,
+               tuneGrid = expand.grid(k = c(1:10, 20, 30))
+               )
+knn.fit
+```
+
+After tinkering it seems the best model only uses the age variable
+
+```{r}
+corr_vars <- c("age", "weight", "height", "bmi", "fracscore", "fracture")
+
+set.seed(1234)
+fitControl = trainControl(method = "repeatedcv", number = 10, repeats = 1)
+knn.fit = train(fracture ~ age,
                data = trainingDataframe[, corr_vars],
                method = "knn",
                trControl = fitControl,
