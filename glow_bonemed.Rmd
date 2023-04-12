@@ -17,6 +17,7 @@ library(aplore3)
 library(ggplot2)
 library(dplyr)
 library(plotly)
+library(GGally)
 library(ca)
 library(RColorBrewer)
 library(pheatmap)
@@ -114,6 +115,10 @@ BMI vs fracscore: As fracscore increases the average bmi decreases<br>
 
 ```{r}
 plot(glow_bonemed[, c(5:8, 14)])
+```
+
+```{r}
+ggplotly(ggpairs(glow_bonemed[, c(5:8, 14)], ggplot2::aes(color = glow_bonemed$fracture), lower = list(continuous = wrap("smooth", alpha = 0.5, size = 0.9))))
 ```
 
 Non of the following scatter plots show strong groupings for the fracture/no fracture categorical variable
