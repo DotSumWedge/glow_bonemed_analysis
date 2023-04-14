@@ -28,6 +28,7 @@ library(tidyr)
 library(sjPlot)
 library(sjmisc)
 library(caret)
+library(randomForest)
 library(vcd)
 library(FactoMineR)
 ```
@@ -182,6 +183,19 @@ ggplot(glow_bonemed, aes(x = smoke, y = fracscore)) +
   labs(title = "Fracture Score Summary Statistics for Smokers vs Non Smokers")
 ```
 
+```{r}
+ggplot(glow_bonemed, aes(x = fracture, y = fracscore)) +
+  geom_boxplot() +
+  labs(title = "Fracture score distribution for fracture groups")
+```
+
+```{r}
+ggplot(glow_bonemed, aes(x = fracscore, y = bonetreat, color = fracture)) + 
+  geom_point(position = position_jitter(width = 0.2, height = 0.1)) +
+  labs(x = "Fracture Score", y = "Recieved bone medication treatment at enrollment and at follow up", color = "Fracture") +
+  ggtitle("Difference in Fracture Score vs bonetreatement at enrollment and follow up")
+```
+
 Plot confirms there is a strong correlation between age/fracscore, bmi/weight
 
 ```{r}
@@ -200,11 +214,21 @@ ggcorrplot(corr = corr_df, lab = TRUE, lab_size = 2,
 # Categorical Variable EDA
 
 ```{r}
+mosaicplot(table(glow_bonemed$bonetreat, glow_bonemed$fracture), 
+           color = TRUE,
+           xlab = "Recieved bone medication treatment at enrollment and at follow up",
+           ylab = "Fracture",
+           main = "Mosaic Plot of Bone Treatement and Fracture")
 mosaicplot(table(glow_bonemed$priorfrac, glow_bonemed$fracture), color = TRUE)
+mosaicplot(table(glow_bonemed$bonemed, glow_bonemed$fracture), color = TRUE)
+mosaicplot(table(glow_bonemed$bonemed_fu, glow_bonemed$fracture), color = TRUE)
 ```
 
 ```{r}
 chisq.test(table(glow_bonemed$priorfrac, glow_bonemed$fracture))
+chisq.test(table(glow_bonemed$bonemed, glow_bonemed$fracture))
+chisq.test(table(glow_bonemed$bonemed_fu, glow_bonemed$fracture))
+chisq.test(table(glow_bonemed$bonetreat, glow_bonemed$fracture))
 ```
 
 Perform chi-squared test on all categorical variables
@@ -395,6 +419,38 @@ knn.fit = train(fracture ~ age,
                tuneGrid = expand.grid(k = c(1:10, 20, 30))
                )
 knn.fit
+```
+
+priorfrac - If the patient previously had a fracture<br>
+age - Age at Enrollment (years)<br>
+weight - Weight at enrollment (Kilograms)<br>
+height - Height at enrollment (Centimeters)<br>
+bmi - Body Mass Index (Kg/m^2)<br>
+premeno - Menopause before age 45 (1: No, 2: Yes)<br>
+momfrac - Mother had hip fracture (1: No, 2: Yes)<br>
+armassist - Arms are needed to stand from a chair (1: No, 2: Yes)<br>
+smoke - Former or current smoker (1: No, 2: Yes)<br>
+raterisk - Self-reported risk of fracture (1: Less than others of the same age, 2: Same as others of the same age, 3: Greater than others of the same age<br>
+fracscore - Fracture Risk Score (Composite Risk Score)<br>
+fracture - Any fracture in first year (1: No, 2: Yes)<br>
+bonemed - Bone medications at enrollment (1: No, 2: Yes)<br>
+bonemed_fu - Bone medications at follow-up (1: No, 2: Yes)<br>
+bonetreat - Bone medications both at enrollment and follow-up (1: No, 2: Yes)<br>
+
+```{r}
+trainingDataframe
+testingDataframe
+# set.seed(1234)
+
+forestModel = randomForest(fracture ~ priorfrac + age + smoke + bonemed + bonemed_fu, 
+  data = trainingDataframe, 
+  ntree = 500, 
+  mtry = 3, 
+  imprtance = TRUE)
+
+forestPredictions = predict(forestModel, testingDataframe)
+
+confusionMatrix(forestPredictions, testingDataframe$fracture)
 ```
 
 #Sources:<br>
