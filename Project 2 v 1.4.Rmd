@@ -434,13 +434,14 @@ fitControl<-trainControl(method="repeatedcv",number=10,repeats=1,classProbs=TRUE
 set.seed(4)
 
 #Version 1
-lda.fit<-train(fracture ~ . + priorfrac:fracscore + bmi:fracscore + fracscore:bonetreat,
+lda.fit<-train(fracture ~ . - sub_id + priorfrac:fracscore + bmi:fracscore + fracscore:bonetreat,
                data=trainingDataframe,
                method="lda",
                trControl=fitControl,
+               preProc = c("center", "scale"),
                metric="logLoss")
 
-lda.fit # logLoss = 0.157269
+lda.fit # logLoss = 0.5663
 
 #Computing predicted probabilities on the training data
 ldafit.predprobs<-predict(lda.fit, trainingDataframe, type = "prob")[,"Yes"]
@@ -512,15 +513,41 @@ table(validatePredictions) # sanity check
 # check confusion matrix positive class is no fracture
 confusionMatrix(data = validatePredictions, reference = testingDataframe$fracture, positive="Yes")
 
+#### trying new way to get AUC-ROC for random forest model
+#Computing predicted probabilities on the training data
 
-# Plot both complex and lda models
+# Prediction
+rf.predicted.prob <- predict(randomForestModel, testingDataframe, type="prob")[,"Yes"] 
+
+# draw ROC curve
+rf.result.roc <- roc(response=testingDataframe$fracture,predictor= rf.predicted.prob,levels=c("No","Yes")) 
+
+# plot
+plot(rf.result.roc, print.thres="best", print.thres.best.method="closest.topleft")
+
+result.coords <- coords(rf.result.roc, "best", best.method="closest.topleft", ret=c("threshold", "sensitivity", "specificity"))
+
+print(result.coords)#to get threshold and sensitivity and specificity
+
+# Plot complex, lda models, and random forest
 plot(complex1.roc.Valid,print.thres="best",col="red")
-plot(ldafit.roc, col="lightblue", add = T, legend = T)
-plot(rffit.roc, col = "black", add = T)
+plot(ldafit.roc, col="lightblue", add = T, legend = T, print.thres="best")
+plot(rf.result.roc, print.thres="best", print.thres.best.method="closest.topleft", add = T, col = "black")
  legend("bottomright",
        legend=c("Complex", "LDA", "Random Forest"),
        col=c("red", "lightblue", "black"),
        lwd=4, cex =1, xpd = TRUE, horiz = FALSE)
+
+
+# get AUC-ROC for RF
+auc(rf.result.roc) # AUC = 0.7306
+
+```
+```{r}
+# compare all object 2 models with AUC-ROC metrics (higher is better), so in this case the LDA model was best
+auc(complex1.roc) # AUC = 0.7163
+auc(ldafit.roc) # AUC = 0.7436
+auc(rf.result.roc) # AUC = 0.7306
 ```
 
 
@@ -532,8 +559,8 @@ plot(rffit.roc, col = "black", add = T)
 library(sjPlot)
 library(sjmisc)
 plot_model(complex1,type="pred",terms=c("fracscore","bonetreat", "fracture")) # shows predictive probability of fracturing based on bonetreat and fracscore
-# plot(log.roc,print.thres="best") #This graph is nice because the x axis is plotted in terms of specificity rather than FPR
-# auc(log.roc)
+plot(ldafit.roc, print.thres="best") #This graph is nice because the x axis is plotted in terms of specificity rather than FPR
+auc(ldafit.roc)
 
 # skeleton code
 # plot_model(glmnet.fit,type="pred", terms = c("fracscore"))
@@ -541,6 +568,54 @@ plot_model(complex1,type="pred",terms=c("fracscore","bonetreat", "fracture")) # 
 # plot_model(complex1,type="pred",terms=c("Age","Sex","Pclass"))
 
 ```
+```{r}
+ ######## Another Way to do LDA
+library(ROCR)
+lda2 <- lda(fracture ~ . -sub_id + priorfrac:fracscore + bmi:fracscore + fracscore:bonetreat, data=trainingDataframe)
+
+# create predictions
+set.seed(4)
+lda2.preds <- predict(lda2, newdata = testingDataframe)
+
+### CONSTRUCTING ROC AUC PLOT:
+# Get the posteriors as a dataframe.
+lda2.preds <- as.data.frame(lda2.preds$posterior)# Evaluate the model
+
+# Evaluate model
+pred <- prediction(lda2.preds[ , 2], testingDataframe$fracture)
+lda2.roc = performance(pred, measure = "tpr", x.measure = "fpr")
+auc.train <- performance(pred, measure = "auc")
+auc.train <- auc.train@y.values# Plot
+
+# plot model
+plot(lda2.roc)
+abline(a=0, b= 1)
+text(x = .25, y = .65 ,paste("AUC = ", round(auc.train[[1]],3), sep = ""))
+
+# Plot complex and lda model using caret
+plot(complex1.roc.Valid,print.thres="best",col="red")
+plot(ldafit.roc, col="lightblue", add = T, legend = T)
+text(paste("AUC = ", round(auc.train[[1]],3), sep = ""))
+ legend("bottomright",
+       legend=c("Complex", "LDA"),
+       col=c("red", "lightblue"),
+       lwd=4, cex =1, xpd = TRUE, horiz = FALSE)
+
+
+auc(ldafit.roc)
+ 
+ 
+# Plot all complex and lda models
+# plot(complex1.roc.Valid,print.thres="best",col="red")
+# plot(ldafit.roc, col="lightblue", add = T, legend = T)
+# plot(lda2.roc, col = "green", add = T) # this might look funny on graph b/c of coding issues and using ROCR instead of pROC for lda2
+#text(paste("AUC = ", round(auc.train[[1]],3), sep = ""))
+ # legend("bottomright",
+   #    legend=c("Complex", "LDA", "LDA2"),
+    #   col=c("red", "lightblue", "green"),
+     #  lwd=4, cex =1, xpd = TRUE, horiz = FALSE)
+```
+
 
 
 
