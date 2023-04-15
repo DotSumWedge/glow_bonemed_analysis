@@ -1,0 +1,646 @@
+---
+title: "Project 2 New"
+author: "Derek, Garrett, Hud"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: cerulean
+    fontsize: 16pt
+---
+
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(aplore3)
+library(ggplot2)
+library(plotly)
+library(RColorBrewer)
+library(pheatmap)
+library(cluster)
+library(ggcorrplot)
+library(dplyr)
+library(tidyr)
+library(sjPlot)
+library(sjmisc)
+```
+
+Data Format: A data.frame with 500 rows and 18 variables such as:
+
+priorfrac - If the patient previously had a fracture<br>
+age<br>
+weight<br>
+height<br>
+bmi<br>
+premeno<br>
+momfrac<br>
+armassist<br>
+smoke<br>
+raterisk<br>
+fracscore<br>
+fracture<br>
+bonemed - Bone medications at enrollment (1: No, 2: Yes)<br>
+bonemed_fu - Bone medications at follow-up (1: No, 2: Yes)<br>
+bonetreat - Bone medications both at enrollment and follow-up (1: No, 2: Yes)<br>
+
+```{r}
+head(glow_bonemed)
+```
+
+Summary statistics for numeric variables
+
+```{r, message=FALSE, warning=FALSE}
+mysummary = glow_bonemed %>%
+  select(age, weight, height, bmi, fracscore) %>%
+  summarise_each(
+    funs(min = min, 
+    q25 = quantile(., 0.25), 
+    median = median, 
+    q75 = quantile(., 0.75), 
+    max = max,
+    mean = mean, 
+    sd = sd,
+    variance= var))
+# reshape it using tidyr functions
+clean.summary = mysummary %>% 
+  gather(stat, val) %>%
+  separate(stat, into = c("var", "stat"), sep = "_") %>%
+  spread(stat, val) %>%
+  select(var, min, max, mean, sd, variance)
+print(clean.summary)
+```
+Summary statistics for categorical variables
+
+```{r}
+summary(glow_bonemed %>% select(priorfrac, premeno, momfrac, armassist, smoke, raterisk, fracture, bonemed, bonemed_fu, bonetreat))
+```
+
+No missing values
+
+```{r}
+colSums(is.na(glow_bonemed))
+sum(is.na(glow_bonemed))
+
+
+library(kableExtra)
+# different way to present no missing values
+# kable Extra library to make document more presentable
+colSums(is.na(glow_bonemed)) %>%  
+  kable("html", caption = "No missing values") %>% 
+  kable_styling()
+```
+
+Age vs Weight: As weight increases the average age decreases<br>
+Age vs Height: Weak correlation of as height increases age decreases<br>
+Age vs BMI: As bmi increases the average age decreases<br>
+Age vs fracscore: As age increases the average fracscore increases<br>
+
+Weight vs Height: As height increases the average weight increases<br>
+Weight vs BMI: As bmi increases the average weight increases<br>
+Weight vs fracscore: As fracscore increases the average Weight decreases<br>
+
+Height vs BMI: As bmi increases the average height and variance stay the same<br>
+Height vs fracscore: As fracscore increases the average height stays the same though variance might decrease<br>
+
+BMI vs fracscore: As fracscore increases the average bmi decreases<br>
+
+```{r}
+plot(glow_bonemed[, c(5:8, 14)])
+```
+
+Non of the following scatter plots show strong groupings for the fracture/no fracture categorical variable
+```{r}
+ggplot(glow_bonemed, aes(x = age, y = bmi, color = fracture)) +
+  geom_jitter() +
+  labs(title = "BMI vs Age")
+```
+```{r}
+ggplot(glow_bonemed, aes(x = bmi, y = fracscore, color = fracture)) +
+  geom_jitter() +
+  labs(title = "Fracture Score vs BMI")
+```
+
+```{r}
+ggplot(glow_bonemed, aes(x = fracscore, y = age, color = fracture)) +
+  geom_jitter() +
+  labs(title = "Age vs Fracture Score")
+```
+
+```{r}
+ggplot(glow_bonemed, aes(x = weight, y = height, color = fracture)) +
+  geom_jitter() +
+  labs(title = "Height vs Weight")
+```
+
+Once again there doesn't seem to be strong groupings of the fracture categorical variable
+
+```{r, message=FALSE, warning=FALSE}
+fracture3dplot = plot_ly(glow_bonemed, 
+  x = ~age, 
+  y = ~height, 
+  z = ~bmi, 
+  color = ~fracture, 
+  colors = c('#0C4B8E', '#BF382A')) %>% add_markers()
+fracture3dplot
+```
+
+There are so little "yes" fracture results that the plot isn't very useful
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(glow_bonemed, aes(x = bmi, y = fracscore, colour = fracture)) + 
+  geom_point() +
+  geom_smooth(method = "loess", size = 1, span = 0.75) +
+  ylim(-0.2, 1.2)
+```
+
+```{r, echo=FALSE}
+ggplot(glow_bonemed, aes(x = bmi, y = age, colour = raterisk)) +
+  geom_point() +
+  geom_smooth(method = "loess", linewidth = 1, span = 0.75) +
+  facet_wrap(~raterisk)
+```
+
+The boxplot shows that the mean fracscore seems to be slightly higher for smokers compared to non smokers
+
+```{r}
+ggplot(glow_bonemed, aes(x = smoke, y = fracscore)) +
+  geom_boxplot() +
+  labs(title = "Fracture Score Summary Statistics for Smokers vs Non Smokers")
+```
+
+Plot confirms there is a strong correlation between age/fracscore, bmi/weight
+
+```{r}
+corr_vars <- c("age", "weight", "height", "bmi", "fracscore")
+corr_df <- glow_bonemed[, corr_vars]
+corr_df <- cor(corr_df)
+ggcorrplot(corr = corr_df, lab = TRUE, lab_size = 2,
+  colors = c("#6D9EC1", "white", "#E46726")) +
+  labs(title = "Correlation Between Variables") +
+  theme(plot.title = element_text(hjust = .5),
+  plot.subtitle = element_text(hjust = .5))
+```
+
+# Clustering EDA
+
+```{r}
+pheatmap(glow_bonemed[, c(5,8)], scale = "column", fontsize_row = 0.1, cluster_cols = F, legend = T, color = colorRampPalette(c("blue", "white", "red"), space = "rgb")(100))
+```
+
+```{r}
+pheatmap(glow_bonemed[, 5:8], scale = "column", fontsize_row = 0.1, cluster_cols = F, legend = T, color = colorRampPalette(c("blue", "white", "red"), space = "rgb")(100))
+```
+
+```{r}
+zScoreScale = scale(glow_bonemed[, 5:8])
+zScoreDistance = dist(zScoreScale)
+continuousVariableClustering = hclust(zScoreDistance, method = "complete")
+plot(continuousVariableClustering)
+```
+
+# Modeling
+
+Split the data into a training/testing set
+
+```{r}
+set.seed(4)
+trainingIndices = sample(c(1:dim(glow_bonemed)[1]), dim(glow_bonemed)[1]*0.8)
+trainingDataframe = glow_bonemed[trainingIndices,]
+testingDataframe = glow_bonemed[-trainingIndices,]
+```
+
+Age is the only statistically significant continuous variable at the alpha = 0.2 level (p < 0.0001)
+
+```{r}
+model = glm(fracture ~ age + weight + height + bmi, data = glow_bonemed, family = "binomial")
+summary(model)
+AIC(model)
+
+library(ResourceSelection) 
+hoslem.test(model$y,fitted(model)) # shows non-significant test result which means this is a decent model fit
+
+# get odds ratio for model
+exp((model$coefficients)) 
+
+# get confidence intervals
+exp(confint(model))
+```
+
+```{r}
+# trying to figure out how to use sjPlot to mimic what we did in unit12 prelive
+#plot_model(model, type = "pred", terms = c("age", "smoke"))
+```
+
+```{r}
+corr_vars <- c("age", "weight", "height", "bmi", "fracscore")
+pc.result<-prcomp(glow_bonemed[, corr_vars],scale.=TRUE)
+#Eigen Vectors
+pc.result$rotation
+#Eigen Values
+eigenvals<-pc.result$sdev^2
+eigenvals
+
+```
+
+```{r}
+#Scree plot
+par(mfrow = c(1,2))
+plot(eigenvals,type = "l",
+     main = "Scree Plot",
+     ylab = "Eigen Values",
+     xlab = "PC #")
+plot(eigenvals / sum(eigenvals), 
+     type = "l", main = "Scree Plot", 
+     ylab = "Prop. Var. Explained", 
+     xlab = "PC #", 
+     ylim = c(0, 1))
+cumulative.prop = cumsum(eigenvals / sum(eigenvals))
+lines(cumulative.prop, lty = 2)
+```
+
+
+```{r}
+# Loess curve for fracscore by bonetreatment group showing fracture or not
+glow_bonemed$bonetreat.num <- ifelse(glow_bonemed$bonetreat == "No", 0, 1)
+ggplot(glow_bonemed, aes(x = fracscore, y = bonetreat.num, color = fracture)) +
+  geom_jitter()+ 
+  geom_smooth(method="loess",size=1,span=1)+
+  ylim(-.2,1.2) +
+  xlab("Fracture Score") +
+  ylab("Received bonetreatment at both iterations") +
+  ggtitle("Difference in Fracture Score vs bonetreatment at both time points")
+# shows that there is not an increased risk, i.e. no changes, in likelihood of fracture, whereas only receiving one or no treatments trends to increase the likelihood of a fracture as the fracture score goes up
+
+# plot breaking down to see if there is any separation
+ggplot(glow_bonemed, aes(x = fracscore, y = bonetreat, color = fracture)) +
+  geom_jitter()
+
+# in bonetreat, i.e. bone meds at both time points, in the no group, there appear to be higher fracture rates with increased fracscore, which would be predicted, i.e. if you received treatment at both times there doesn't appear to be a correlation in fracscore and breaking a bone (fracture), vs the group that did not receive both treatments appears to be a correlation with a higher likelihood correlating to likelihood of fracture
+```
+```{r}
+# Loess curve for fracscore by physician group showing fracture or not
+table(glow_bonemed$priorfrac) # show table of prior fractures
+
+ggplot(glow_bonemed, aes(x = fracscore, y = ifelse(glow_bonemed$fracture == "No", 0, 1), color = priorfrac)) +
+  geom_jitter()+ 
+  geom_smooth(method="loess",size=1,span=1)+
+  ylim(-.2,1.2) +
+  xlab("Fracture Score") +
+  ylab("Fracture during study") +
+  ggtitle("Fracture Score vs Fracture during study within prior fracture groups")
+
+# shows that there is not an increased risk associated with higher fracscore, i.e. no changes, in likelihood of an increased fracture if you previous had a fracture  whereas the group that has never had a fracture tends to increase the likelihood of a fracture as the fracture score goes up
+
+# plot breaking down to see if there is any separation
+ggplot(glow_bonemed, aes(x = bonetreat, y = ifelse(glow_bonemed$priorfrac == "No", 0, 1), color = fracture)) +
+  geom_jitter() +
+  xlab("Both Bone treatments") +
+  ylab("Had Prior Fracture") +
+  ggtitle("Bone treament vs prior fracture within fracture during study groups")
+
+```
+
+```{r}
+library(caret)
+# plot
+ggplot(glow_bonemed, aes(x = age, y = ifelse(glow_bonemed$smoke == "No", 0, 1), color = fracture)) +
+  geom_jitter()+ 
+  geom_smooth(method="loess",size=1,span=1)+
+  ylim(-.2,1.2)
+
+```
+
+
+```{r feature selection using glmnet}
+library(pROC)
+set.seed(4)
+
+#note CV and error metric are not really used here, but logLoss is reported for the final model.
+# set tuning parameters using logloss
+fitControl<-trainControl(method="repeatedcv",number=10,repeats=1,classProbs=TRUE, summaryFunction=mnLogLoss)
+
+# build glmnet model
+
+glmnet.fit<-train(fracture ~ . - sub_id,
+                    data=trainingDataframe,
+                    method="glmnet",
+                    trControl=fitControl,
+                    metric="logLoss")
+coef(glmnet.fit$finalModel,glmnet.fit$finalModel$lambdaOpt)
+
+#Getting predictions for glmnet for Complex model
+glmnetfit.predprobs<-predict(glmnet.fit, trainingDataframe ,type="prob")
+
+
+# glmnet ROC
+glmnet.roc<-roc(response= trainingDataframe$fracture, predictor=glmnetfit.predprobs$No,levels=c("No","Yes"))
+
+
+plot(glmnet.roc,col="steelblue")
+
+# Save for later
+# plot(glmnet.roc,add=T,col="steelblue")
+# legend("bottomright",
+#      legend=c("Simple", "Complex","GLMNET"),
+#      col=c("black", "red","steelblue"),
+#      lwd=4, cex =1, xpd = TRUE, horiz = FALSE)
+
+```
+\
+Left out the following variables: phy_id, age, weight, bonetreat, bonemed, smoke, premeno. Although, through EDA age seems to be an important variable so will keep this in, in future models.  
+\
+
+
+```{r complex model using interactions and/or polynominals }
+# Build complex model with interactions and/or polynomials
+complex1 = glm(fracture ~  age + bonetreat + fracscore + priorfrac + bonemed + bonemed_fu + priorfrac:fracscore + age:fracscore + fracscore:bonetreat, data = trainingDataframe, family = "binomial")
+summary(complex1)
+AIC(complex1)
+
+
+library(ResourceSelection) 
+hoslem.test(complex1$y,fitted(complex1)) # shows non-significant test result which means this is a decent model fit
+
+# get odds ratio for model
+exp((complex1$coefficients)) 
+
+# get confidence intervals
+exp(confint(complex1))
+
+
+# Get Predictions
+#Complex model from previous
+complex1.predprobs<-predict(complex1,trainingDataframe ,type="response")
+
+# complex model ROC
+complex1.roc<-roc(response=trainingDataframe$fracture,predictor=complex1.predprobs,levels=c("No","Yes"))
+
+# plot ROC
+plot(complex1.roc,print.thres="best",col="red", main = "Best threshold for training data set for complex model")
+
+# Now check validation in test set
+set.seed(4)
+validateComplexPred <- predict(complex1, newdata = testingDataframe, type="response")
+
+
+# check confusion matrix positive class is no fracture
+threshold = 0.322
+validateComplexPredictions<-factor(ifelse(validateComplexPred>threshold,"No","Yes"))
+
+#Confusion matrix for objective 2 complex model 1 with interactions
+confusionMatrix(data = validateComplexPredictions, reference = testingDataframe$fracture, positive="Yes")
+
+# complex model ROC
+complex1.roc.Valid<-roc(response=testingDataframe$fracture,predictor=validateComplexPred,levels=c("No","Yes"))
+
+# plot ROC
+plot(complex1.roc.Valid,print.thres="best",col="red", main = "Best threshold for validation data set Complex Model")
+
+# Best threshold for validation is 0.219
+auc(complex1.roc.Valid) # 0.7312
+```
+
+```{r}
+## effects plots for complex model 1
+library(sjPlot)
+library(sjmisc)
+plot_model(complex1,type="pred",terms=c("fracscore","bonetreat", "fracture")) # shows predictive probability of fracturing based on bonetreat and fracscore
+
+plot_model(complex1,type="pred",terms=c("fracscore","age[55,65,75,90]", "fracture")) # shows predictive probability of fracturing based on bonetreat and age, surprisingly lower ages are more likely to break a bone as fracscore increases, maybe due to mobility
+
+plot_model(complex1,type="pred",terms=c("fracture","age[55,65,75,90]"))
+# another way to look at the same plot
+
+```
+
+```{r little more EDA}
+library(tidyr)
+library(dplyr)
+
+g1<-glow_bonemed %>% 
+  group_by(fracture,fracscore) %>%
+  summarise(cnt=n()) %>%
+  mutate(perc=round(cnt/sum(cnt),4))%>%
+  arrange(desc(perc))
+
+g1
+
+ggplot(g1,aes(x=fracscore,y=perc,colour=fracture))+
+  geom_bar(aes(fill=fracture),show.legend=T,stat="identity")+
+  ylab("Proportion of fractures")+
+  xlab("Fracture Score")
+
+# as fracscore increase so does the proportion of getting a fracture
+summary(glow_bonemed$bonemed_fu)
+```
+
+
+```{r complex model using LDA or QDA}
+library(caret)
+fitControl<-trainControl(method="repeatedcv",number=10,repeats=1,classProbs=TRUE, summaryFunction=mnLogLoss)
+
+set.seed(4)
+
+# create site_id as factor
+trainingDataframe$site_id_factor <- factor(trainingDataframe$site_id)
+testingDataframe$site_id_factor <- factor(testingDataframe$site_id)
+
+#Version 1
+lda.fit<-train(fracture ~ . - sub_id - phy_id - site_id + priorfrac:fracscore + age:fracscore + fracscore:bonetreat,
+               data=trainingDataframe,
+               method="lda",
+               trControl=fitControl,
+               preProc = c("center", "scale"),
+               metric="logLoss")
+
+lda.fit # logLoss = 0.5702
+
+#Computing predicted probabilities on the testing data
+ldafit.predprobs.valid<-predict(lda.fit, testingDataframe, type = "prob")[,"Yes"]
+
+
+ldafit.roc.valid<-roc(response=testingDataframe$fracture,predictor= ldafit.predprobs.valid,levels=c("No","Yes"))
+
+# Now check validation in test set
+set.seed(4)
+validatePredictions <- predict(lda.fit, newdata = testingDataframe)
+
+table(validatePredictions) # sanity check
+
+# check confusion matrix positive class is no fracture
+confusionMatrix(data = validatePredictions, reference = testingDataframe$fracture, positive="No")
+
+
+# check confusion matrix positive class is yes fracture
+confusionMatrix(data = validatePredictions, reference = testingDataframe$fracture, positive="Yes")
+
+
+# plot ROC for LDA validation set
+plot(ldafit.roc.valid,print.thres="best",col="lightblue", main = "Best threshold for LDA validation data set")
+
+# Best threshold for validation is 0.219
+auc(ldafit.roc.valid) # 
+
+# Plot both complex and lda models
+plot(complex1.roc.Valid,print.thres="best",col="red")
+plot(ldafit.roc.valid, col="lightblue", add = T, legend = T, print.thres="best")
+ legend("bottomright",
+       legend=c("Complex", "LDA"),
+       col=c("red", "lightblue"),
+       lwd=4, cex =1, xpd = TRUE, horiz = FALSE)
+
+```
+
+
+
+```{r nonparametric complex model using random forest}
+library(ranger)
+# set tuning parameters using logloss
+fitControl<-trainControl(method="repeatedcv",number=5,repeats=1,classProbs=TRUE, savePredictions = T)
+
+
+randomForestModel<-train(fracture ~ . - sub_id - phy_id,
+                    data=trainingDataframe,
+                    method="ranger",
+                    trControl=fitControl,
+                    preProc = c("center", "scale"))
+
+
+summary(randomForestModel)
+randomForestModel$results
+
+library(MLeval)
+result <- evalm(randomForestModel)
+
+#get AUROC
+result$roc
+
+
+#Computing predicted probabilities on the training data
+rf.predprobs<-predict(randomForestModel, trainingDataframe, type = "prob")[,"Yes"]
+
+summary(rf.predprobs) # just looking
+
+
+rffit.roc<-roc(response=trainingDataframe$fracture,predictor= rf.predprobs,levels=c("No","Yes"))
+
+# Now check validation in test set
+set.seed(4)
+validatePredictions <- predict(randomForestModel, newdata = testingDataframe)
+
+table(validatePredictions) # sanity check
+
+# check confusion matrix positive class is no fracture
+confusionMatrix(data = validatePredictions, reference = testingDataframe$fracture, positive="Yes")
+
+#### trying new way to get AUC-ROC for random forest model
+#Computing predicted probabilities on the training data
+
+# Prediction
+rf.predicted.prob <- predict(randomForestModel, testingDataframe, type="prob")[,"Yes"] 
+
+# draw ROC curve
+rf.result.roc <- roc(response=testingDataframe$fracture,predictor= rf.predicted.prob,levels=c("No","Yes")) 
+
+# plot
+plot(rf.result.roc, print.thres="best", print.thres.best.method="closest.topleft")
+
+result.coords <- coords(rf.result.roc, "best", best.method="closest.topleft", ret=c("threshold", "sensitivity", "specificity"))
+
+print(result.coords)#to get threshold and sensitivity and specificity
+
+# Plot complex, lda models, and random forest
+plot(complex1.roc.Valid,col="red")
+# plot(complex1.roc.Valid,print.thres="best",col="red") # use to print best threshold
+
+plot(ldafit.roc.valid, col="lightblue", add = T)
+# plot(ldafit.roc, col="lightblue", add = T, legend = T, print.thres="best")  # use to print best threshold
+
+plot(rf.result.roc, add = T, col = "black", legend = T)
+# plot(rf.result.roc,print.thres="best", add = T, col = "black", legend = T) # use to print best threshold
+legend("bottomright",
+       legend=c("Complex", "LDA", "Random Forest"),
+       col=c("red", "lightblue", "black"),
+       lwd=4, cex =1, xpd = TRUE, horiz = FALSE)
+
+
+# get AUC-ROC for RF
+auc(rf.result.roc) # AUC = 0.7706
+
+```
+
+```{r}
+# compare all object 2 models with AUC-ROC metrics (higher is better), so in this case the RF model was best
+auc(complex1.roc.Valid) # AUC 0.7312
+auc(ldafit.roc.valid) # AUC = 0.7414
+auc(rf.result.roc) # AUC = 0.7706
+```
+
+```{r}
+# Single versions of ROC plots for powerpoint
+plot(complex1.roc.Valid, print.thres="best", main = "Complex model ROC")
+plot(ldafit.roc.valid, print.thres="best", main = "LDA model ROC")
+plot(randomForestModel, print.thres="best", main = "Random Forest model ROC")
+```
+
+
+```{r}
+ ######## Another Way to do LDA - worked then stopped working..
+# library(ROCR)
+# library(MASS)
+# lda2 <- lda(fracture ~ . -sub_id - phy_id + priorfrac:fracscore + age:fracscore + fracscore:bonetreat, data=trainingDataframe)
+
+
+# create predictions
+#set.seed(4)
+#lda2.preds <- predict(lda2, newdata = testingDataframe)
+
+### CONSTRUCTING ROC AUC PLOT:
+# Get the posteriors as a dataframe.
+#lda2.preds <- as.data.frame(lda2.preds$posterior)# Evaluate the model
+
+# Evaluate model
+#pred <- prediction(lda2.preds[ , 2], testingDataframe$fracture)
+#lda2.roc = performance(pred, measure = "tpr", x.measure = "fpr")
+#auc.train <- performance(pred, measure = "auc")
+#auc.train <- auc.train@y.values# Plot
+
+# plot model
+#plot(lda2.roc)
+#abline(a=0, b= 1)
+#text(x = .25, y = .65 ,paste("AUC = ", round(auc.train[[1]],3), sep = ""))
+
+# Plot complex and lda model using caret
+#plot(complex1.roc.Valid,print.thres="best",col="red")
+#plot(ldafit.roc, col="lightblue", add = T, legend = T)
+#text(paste("AUC = ", round(auc.train[[1]],3), sep = ""))
+# legend("bottomright",
+#       legend=c("Complex", "LDA"),
+#       col=c("red", "lightblue"),
+#       lwd=4, cex =1, xpd = TRUE, horiz = FALSE)
+
+
+#auc(ldafit.roc) # 0.7474
+ 
+ 
+# Plot all complex and lda models
+# plot(complex1.roc.Valid,print.thres="best",col="red")
+# plot(ldafit.roc, col="lightblue", add = T, legend = T)
+# plot(lda2.roc, col = "green", add = T) # this might look funny on graph b/c of coding issues and using ROCR instead of pROC for lda2
+#text(paste("AUC = ", round(auc.train[[1]],3), sep = ""))
+ # legend("bottomright",
+   #    legend=c("Complex", "LDA", "LDA2"),
+    #   col=c("red", "lightblue", "green"),
+     #  lwd=4, cex =1, xpd = TRUE, horiz = FALSE)
+```
+
+
+
+
+#Sources:<br>
+  Hosmer, D.W., Lemeshow, S. and Sturdivant, R.X. (2013) Applied Logistic Regression, 3rd ed.,
+  New York: Wiley
+  
+  https://cran.r-project.org/web/packages/aplore3/aplore3.pdf#page=11&zoom=100,132,90
