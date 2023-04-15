@@ -438,11 +438,8 @@ bonemed_fu - Bone medications at follow-up (1: No, 2: Yes)<br>
 bonetreat - Bone medications both at enrollment and follow-up (1: No, 2: Yes)<br>
 
 ```{r}
-trainingDataframe
-testingDataframe
-# set.seed(1234)
 
-forestModel = randomForest(fracture ~ priorfrac + age + smoke + bonemed + bonemed_fu, 
+forestModel = randomForest(fracture ~ priorfrac + age + premeno + momfrac + armassist + smoke + fracscore + bonemed + bonemed_fu, 
   data = trainingDataframe, 
   ntree = 500, 
   mtry = 3, 
