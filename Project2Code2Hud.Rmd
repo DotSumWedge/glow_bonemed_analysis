@@ -1,0 +1,188 @@
+---
+title: "glow_bonemed Objective 1"
+author: "Joshua Hudson"
+date: "2023-14-04"
+output: 
+  html_document:
+    theme: cerulean
+    fontsize: 16pt
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(aplore3)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(ca)
+library(RColorBrewer)
+library(pheatmap)
+library(cluster)
+library(ggcorrplot)
+library(dplyr)
+library(tidyr)
+library(sjPlot)
+library(sjmisc)
+library(caret)
+library(vcd)
+library(FactoMineR)
+```
+
+```{r}
+#??glow500
+```
+
+Data Format: A data.frame with 500 rows and 18 variables such as:
+
+priorfrac - If the patient previously had a fracture<br>
+age - Age at Enrollment (years)<br>
+weight - Weight at enrollment (Kilograms)<br>
+height - Height at enrollment (Centimeters)<br>
+bmi - Body Mass Index (Kg/m^2)<br>
+premeno - Menopause before age 45 (1: No, 2: Yes)<br>
+momfrac - Mother had hip fracture (1: No, 2: Yes)<br>
+armassist - Arms are needed to stand from a chair (1: No, 2: Yes)<br>
+smoke - Former or current smoker (1: No, 2: Yes)<br>
+raterisk - Self-reported risk of fracture (1: Less than others of the same age, 2: Same as others of the same age, 3: Greater than others of the same age<br>
+fracscore - Fracture Risk Score (Composite Risk Score)<br>
+fracture - Any fracture in first year (1: No, 2: Yes)<br>
+bonemed - Bone medications at enrollment (1: No, 2: Yes)<br>
+bonemed_fu - Bone medications at follow-up (1: No, 2: Yes)<br>
+bonetreat - Bone medications both at enrollment and follow-up (1: No, 2: Yes)<br>
+
+```{r}
+glow_bonemed$fracturenum = ifelse(glow_bonemed$fracture == "No", 0, 1)
+head(glow_bonemed)
+```
+
+
+No missing values
+
+```{r}
+colSums(is.na(glow_bonemed))
+sum(is.na(glow_bonemed))
+```
+
+
+
+
+
+
+
+
+
+EDA
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+head(glow_bonemed)
+ggplot(glow_bonemed, aes(x = age, y = fracturenum, fill = smoke)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. Age") + xlab("Age") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = age, y = fracturenum, fill = bonemed)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. Age") + xlab("Age") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = age, y = fracturenum, fill = bonemed_fu)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. Age") + xlab("Age") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = age, y = fracturenum, fill = bonetreat)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. Age") + xlab("Age") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = age, y = fracturenum, fill = armassist)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. Age") + xlab("Age") + ylab("Probability of Fracture")
+
+#Weight
+ggplot(glow_bonemed, aes(x = weight, y = fracturenum, fill = smoke)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. weight") + xlab("weight") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = weight, y = fracturenum, fill = bonemed)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. weight") + xlab("weight") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = weight, y = fracturenum, fill = bonemed_fu)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. weight") + xlab("weight") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = weight, y = fracturenum, fill = bonetreat)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. weight") + xlab("weight") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = weight, y = fracturenum, fill = armassist)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. weight") + xlab("weight") + ylab("Probability of Fracture")
+
+#height
+
+ggplot(glow_bonemed, aes(x = height, y = fracturenum, fill = smoke)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. height") + xlab("height") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = height, y = fracturenum, fill = bonemed)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. height") + xlab("height") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = height, y = fracturenum, fill = bonemed_fu)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. height") + xlab("height") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = height, y = fracturenum, fill = bonetreat)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. height") + xlab("height") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = height, y = fracturenum, fill = armassist)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.001)) +
+  geom_smooth(method = "loess", size = 1, span =1)+ggtitle("Probability of Fracture vs. height") + xlab("height") + ylab("Probability of Fracture")
+
+```
+
+```{r}
+head(glow_bonemed)
+```
+
+Removed BMI as it is co linear with weight
+Removed Fracscore as it is a form of the response
+
+```{r}
+library(ResourceSelection)
+mymodel<-glm(fracture~priorfrac+age+weight+height+premeno+momfrac+armassist+smoke+raterisk+bonemed+bonemed_fu+bonetreat,data=glow_bonemed,family="binomial")
+summary(mymodel)
+library(car)
+vif(mymodel)
+library(ResourceSelection) 
+hoslem.test(mymodel$y,fitted(mymodel))
+confint(mymodel, level = 0.95)
+```
+
+Reduced model
+
+```{r}
+library(ResourceSelection)
+mymodelr<-glm(fracture~priorfrac+age+bonemed,data=glow_bonemed,family="binomial")
+summary(mymodelr)
+library(car)
+vif(mymodelr)
+hoslem.test(mymodelr$y,fitted(mymodel))
+exp(coef(summary(mymodelr)))
+exp(confint(mymodelr, level = 0.95))
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+head(glow_bonemed)
+ggplot(glow_bonemed, aes(x = age, y = fracturenum, fill = priorfrac)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.01)) +
+  geom_smooth(method = "loess", size = 1, span =3)+ggtitle("Probability of Fracture vs. Age") + xlab("Age") + ylab("Probability of Fracture")
+
+ggplot(glow_bonemed, aes(x = age, y = fracturenum, fill = bonemed)) + 
+  geom_point(aes(color = fracture), position = position_jitter(width = 0.03, height = 0.01)) +
+  geom_smooth(method = "loess", size = 1, span =3)+ggtitle("Probability of Fracture vs. Age") + xlab("Age") + ylab("Probability of Fracture")
+
+```
